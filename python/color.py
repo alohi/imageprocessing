@@ -17,6 +17,9 @@ LCD_D5 = 24
 LCD_D6 = 23
 LCD_D7 = 18
 
+redThresholdArea = 10000
+greenThresholdArea = 10000
+
 # Class for LCD
 class LCD:
 
@@ -191,8 +194,11 @@ class Image:
 		Greenm10  = Greenmoments['m10']
 		Greenarea = Greenmoments['m00']
 
-		if Redarea > 10000:
-			print "Red"
+		# print "RED " + str(Redarea)
+		# print "GREEN " + str(Greenarea)
+
+		if Redarea > redThresholdArea:
+			#print "Red"
 			posX = Redm10 / Redarea
 			posY = Redm01 / Redarea
 
@@ -204,9 +210,12 @@ class Image:
 
 			redlastX = posX
 			redlastY = posY
+			if Redarea > Greenarea:
+				print "RED"
+				# Turn Servo Left
 
-		if Greenarea > 10000:
-			print "Green"
+		if Greenarea > greenThresholdArea:
+			#print "Green"
 			posX = Greenm10 / Greenarea
 			posY = Greenm01 / Greenarea
 
@@ -218,6 +227,11 @@ class Image:
 
 			greenlastX = posX
 			greenlastY = posY
+
+			if Greenarea > Redarea:
+				print "GREEN"
+				# Turn Servo Right
+
 
 		cv.imshow("Red Thresholded Image", RedimgThresholded)
 		cv.imshow("Green Thresholded Image", GreenimgThresholded)
