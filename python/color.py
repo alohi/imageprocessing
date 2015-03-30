@@ -128,7 +128,7 @@ class LCD:
 # Class for Image Processing
 class Image:
 
-	def __init__(self, _camera, _interval, filt, lowHSV, highHSV):
+	def __init__(self, _camera, _interval, filt, rlowHSV, rhighHSV, glowHSV, ghighHSV):
 
 		# store 
 		self.cameraIndex = _camera
@@ -137,11 +137,16 @@ class Image:
 		self.capture = cv.VideoCapture(self.cameraIndex)
 
 		#self.fwindow = cv.namedWindow("Result")
-		self.lowHSV = lowHSV
-		self.highHSV = highHSV
+		self.redlowHSV = rlowHSV
+		self.redhighHSV = rhighHSV
 
-		self.lastX = 0
-		self.lastY = 0
+		self.greenlowHSV = glowHSV
+		self.greenhighHSV = ghighHSV
+
+		self.greenlastX = 0
+		self.greenlastY = 0
+		self.redlastX 	= 0
+		self.redlastY 	= 0
 
 	def doCaptureAndProcess(self):
 		_, frame = self.capture.read()
@@ -160,76 +165,71 @@ class Image:
 		kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(5,5))
 
 		hsvImage = cv.cvtColor(filteredImage, cv.COLOR_BGR2HSV)
-		imgThresholded = cv.inRange(hsvImage, self.lowHSV, self.highHSV)
-		erosion = cv.erode(imgThresholded,kernel,iterations = 1)
-		dilation = cv.dilate(imgThresholded,kernel,iterations = 1)
 
-		dilation = cv.dilate(imgThresholded,kernel,iterations = 1)
-		erosion = cv.erode(imgThresholded,kernel,iterations = 1)
+		RedimgThresholded = cv.inRange(hsvImage, self.redlowHSV, self.redhighHSV)
+		GreenimgThresholded = cv.inRange(hsvImage, self.greenlowHSV, self.greenhighHSV)
+		erosion = cv.erode(RedimgThresholded,kernel,iterations = 1)
+		dilation = cv.dilate(RedimgThresholded,kernel,iterations = 1)
 
-		moments = cv.moments(imgThresholded)
+		dilation = cv.dilate(RedimgThresholded,kernel,iterations = 1)
+		erosion = cv.erode(RedimgThresholded,kernel,iterations = 1)
 
+		erosion = cv.erode(GreenimgThresholded,kernel,iterations = 1)
+		dilation = cv.dilate(GreenimgThresholded,kernel,iterations = 1)
 
-		m01  = moments['m01']
-		m10  = moments['m10']
-		area = moments['m00']
+		dilation = cv.dilate(GreenimgThresholded,kernel,iterations = 1)
+		erosion = cv.erode(GreenimgThresholded,kernel,iterations = 1)
 
-		if area > 10000:
-			posX = m10 / area
-			posY = m01 / area
+		Redmoments = cv.moments(RedimgThresholded)
+		Greenmoments = cv.moments(GreenimgThresholded)
 
-			print "X " + str(posX)
-			print "Y " + str(posY)
+		Redm01  = Redmoments['m01']
+		Redm10  = Redmoments['m10']
+		Redarea = Redmoments['m00']
 
-			if self.lastX >= 0 and self.lastY >= 0 and posX >= 0  and posY >= 0:
-				# pt1 = np.array([posX,posY], dtype=np.uint8)
-				# pt2 = np.array([self.lastX,self.lastY], dtype=np.uint8)
-				# col = np.array([0,0,255], dtype=np.uint8)
-				cv.line(filteredImage, (int(posX), int(posY)), (int(self.lastX),int(self.lastY)), (0,0,255), 2)
+		Greenm01  = Greenmoments['m01']
+		Greenm10  = Greenmoments['m10']
+		Greenarea = Greenmoments['m00']
 
-			lastX = posX
-			lastY = posY
+		if Redarea > 10000:
+			print "Red"
+			posX = Redm10 / Redarea
+			posY = Redm01 / Redarea
 
-		#result = cv.bitwise_and(filteredImage,filteredImage,mask = maskedImage)
+			# print "X " + str(posX)
+			# print "Y " + str(posY)
 
-		cv.imshow("Thresholded Image", imgThresholded)
+			if self.redlastX >= 0 and self.redlastY >= 0 and posX >= 0  and posY >= 0:
+				cv.line(filteredImage, (int(posX), int(posY)), (int(self.redlastX),int(self.redlastY)), (0,0,255), 5)
+
+			redlastX = posX
+			redlastY = posY
+
+		if Greenarea > 10000:
+			print "Green"
+			posX = Greenm10 / Greenarea
+			posY = Greenm01 / Greenarea
+
+			# print "X " + str(posX)
+			# print "Y " + str(posY)
+
+			if self.greenlastX >= 0 and self.greenlastY >= 0 and posX >= 0  and posY >= 0:
+				cv.line(filteredImage, (int(posX), int(posY)), (int(self.greenlastX),int(self.greenlastY)), (0,0,255), 5)
+
+			greenlastX = posX
+			greenlastY = posY
+
+		cv.imshow("Red Thresholded Image", RedimgThresholded)
+		cv.imshow("Green Thresholded Image", GreenimgThresholded)
 		cv.imshow("Original Image", filteredImage)
 
-# ###########################################
-# ## Main Code
-# if len(sys.argv) != 10:
-# 	print "Error"
-# 	sys.exit(0)
+redlowHSV = np.array([170,150,60], dtype=np.uint8)
+redhighHSV = np.array([179,255,255], dtype=np.uint8)
 
-# # Parse args
-# cam = int(sys.argv[1])
-# interval = int(sys.argv[2])
-# highh = int(sys.argv[3])
-# highs = int(sys.argv[4])
-# highv = int(sys.argv[5])
-# lowh = int(sys.argv[6])
-# lows = int(sys.argv[7])
-# lowv = int(sys.argv[8])
-# filt = int(sys.argv[9])
+greenlowHSV = np.array([50,150,60], dtype=np.uint8)
+greenhighHSV = np.array([75,255,255], dtype=np.uint8)
 
-# # Print Value
-# print "Camera Index : " + str(cam)
-# print "Interval : " + str(interval)
-# print "HIGH H : " + str(highh)
-# print "HIGH S : " + str(highs)
-# print "HIGH V : " + str(highv)
-# print "LOW H : " + str(lowh)
-# print "LOW S : " + str(lows)
-# print "LOW V : " + str(lowv)
-# print "FILTER : " + str(filt)
-
-# Construct an array for inRange filter
-# lowHSV = np.array([lowh,lows,lowv], dtype=np.uint8)
-# highHSV = np.array([highh,highs,highv], dtype=np.uint8)
-lowHSV = np.array([170,150,60], dtype=np.uint8)
-highHSV = np.array([179,255,255], dtype=np.uint8)
-
-obj = Image(1, 1, 1, lowHSV, highHSV)
+obj = Image(1, 1, 1, redlowHSV, redhighHSV, greenlowHSV, greenhighHSV)
 
 # If LCD is enabled enable lcd for display
 if lcdEnable == True:
