@@ -84,7 +84,7 @@ class LCD:
 		GPIO.output(LCD_RS, mode) # RS
 
 		# High bits
-	h	GPIO.output(LCD_D4, False)
+		GPIO.output(LCD_D4, False)
 		GPIO.output(LCD_D5, False)
 		GPIO.output(LCD_D6, False)
 		GPIO.output(LCD_D7, False)
@@ -136,9 +136,12 @@ class Image:
 		self.filt = filt
 		self.capture = cv.VideoCapture(self.cameraIndex)
 
-		self.fwindow = cv.namedWindow("Result")
+		#self.fwindow = cv.namedWindow("Result")
 		self.lowHSV = lowHSV
 		self.highHSV = highHSV
+
+		self.lastX = 0
+		self.lastY = 0
 
 	def doCaptureAndProcess(self):
 		_, frame = self.capture.read()
@@ -154,45 +157,79 @@ class Image:
 		elif self.filt == 4:
 			filteredImage = cv.bilateralFilter(frame,9,75,75)
 
+		kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE,(5,5))
+
 		hsvImage = cv.cvtColor(filteredImage, cv.COLOR_BGR2HSV)
-		maskedImage = cv.inRange(hsvImage, self.lowHSV, self.highHSV)
-		result = cv.bitwise_and(filteredImage,filteredImage,mask = maskedImage)
+		imgThresholded = cv.inRange(hsvImage, self.lowHSV, self.highHSV)
+		erosion = cv.erode(imgThresholded,kernel,iterations = 1)
+		dilation = cv.dilate(imgThresholded,kernel,iterations = 1)
 
-		cv.imshow("Result", result)
+		dilation = cv.dilate(imgThresholded,kernel,iterations = 1)
+		erosion = cv.erode(imgThresholded,kernel,iterations = 1)
 
-###########################################
-## Main Code
-if len(sys.argv) != 10:
-	print "Error"
-	sys.exit(0)
+		moments = cv.moments(imgThresholded)
 
-# Parse args
-cam = int(sys.argv[1])
-interval = int(sys.argv[2])
-highh = int(sys.argv[3])
-highs = int(sys.argv[4])
-highv = int(sys.argv[5])
-lowh = int(sys.argv[6])
-lows = int(sys.argv[7])
-lowv = int(sys.argv[8])
-filt = int(sys.argv[9])
 
-# Print Value
-print "Camera Index : " + str(cam)
-print "Interval : " + str(interval)
-print "HIGH H : " + str(highh)
-print "HIGH S : " + str(highs)
-print "HIGH V : " + str(highv)
-print "LOW H : " + str(lowh)
-print "LOW S : " + str(lows)
-print "LOW V : " + str(lowv)
-print "FILTER : " + str(filt)
+		m01  = moments['m01']
+		m10  = moments['m10']
+		area = moments['m00']
+
+		if area > 10000:
+			posX = m10 / area
+			posY = m01 / area
+
+			print "X " + str(posX)
+			print "Y " + str(posY)
+
+			if self.lastX >= 0 and self.lastY >= 0 and posX >= 0  and posY >= 0:
+				# pt1 = np.array([posX,posY], dtype=np.uint8)
+				# pt2 = np.array([self.lastX,self.lastY], dtype=np.uint8)
+				# col = np.array([0,0,255], dtype=np.uint8)
+				cv.line(filteredImage, (int(posX), int(posY)), (int(self.lastX),int(self.lastY)), (0,0,255), 2)
+
+			lastX = posX
+			lastY = posY
+
+		#result = cv.bitwise_and(filteredImage,filteredImage,mask = maskedImage)
+
+		cv.imshow("Thresholded Image", imgThresholded)
+		cv.imshow("Original Image", filteredImage)
+
+# ###########################################
+# ## Main Code
+# if len(sys.argv) != 10:
+# 	print "Error"
+# 	sys.exit(0)
+
+# # Parse args
+# cam = int(sys.argv[1])
+# interval = int(sys.argv[2])
+# highh = int(sys.argv[3])
+# highs = int(sys.argv[4])
+# highv = int(sys.argv[5])
+# lowh = int(sys.argv[6])
+# lows = int(sys.argv[7])
+# lowv = int(sys.argv[8])
+# filt = int(sys.argv[9])
+
+# # Print Value
+# print "Camera Index : " + str(cam)
+# print "Interval : " + str(interval)
+# print "HIGH H : " + str(highh)
+# print "HIGH S : " + str(highs)
+# print "HIGH V : " + str(highv)
+# print "LOW H : " + str(lowh)
+# print "LOW S : " + str(lows)
+# print "LOW V : " + str(lowv)
+# print "FILTER : " + str(filt)
 
 # Construct an array for inRange filter
-lowHSV = np.array([lowh,lows,lowv], dtype=np.uint8)
-highHSV = np.array([highh,highs,highv], dtype=np.uint8)
+# lowHSV = np.array([lowh,lows,lowv], dtype=np.uint8)
+# highHSV = np.array([highh,highs,highv], dtype=np.uint8)
+lowHSV = np.array([170,150,60], dtype=np.uint8)
+highHSV = np.array([179,255,255], dtype=np.uint8)
 
-obj = Image(cam, interval, filt, lowHSV, highHSV)
+obj = Image(1, 1, 1, lowHSV, highHSV)
 
 # If LCD is enabled enable lcd for display
 if lcdEnable == True:
