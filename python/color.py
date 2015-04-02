@@ -5,6 +5,7 @@ import time
 import sys
 
 lcdEnable = False
+gpioEnable = False
 
 if lcdEnable == True:
 	import RPi.GPIO as GPIO
@@ -17,8 +18,23 @@ LCD_D5 = 24
 LCD_D6 = 23
 LCD_D7 = 18
 
+SWITCH_CAPTURE 	= 11
+SWITCH_STOP		= 9
+
+LED_GREEN		= 10
+LED_RED			= 22
+
 redThresholdArea = 10000
 greenThresholdArea = 10000
+
+def gpioInit():
+	GPIO.setmode(GPIO.BCM)
+	GPIO.setup(LED_GREEN, GPIO.OUT)  
+	GPIO.setup(LED_RED, GPIO.OUT) 
+	GPIO.setup(SWITCH_CAPTURE, GPIO.IN, pull_up_down = GPIO.PUD_UP)  
+	GPIO.setup(SWITCH_STOP, GPIO.IN, pull_up_down = GPIO.PUD_UP) 
+	GPIO.output(LED_RED, True)
+	GPIO.output(LED_GREEN, True)
 
 # Class for LCD
 class LCD:
@@ -212,6 +228,12 @@ class Image:
 			redlastY = posY
 			if Redarea > Greenarea:
 				print "RED"
+				if gpioEnable == True:
+					GPIO.output(LED_GREEN, False)
+					GPIO.output(LED_RED, True)
+				if lcdEnable == True:
+					lcd.lcd_byte(0xC0, False)
+					lcd.lcd_string("GREEN   ")
 				# Turn Servo Left
 
 		if Greenarea > greenThresholdArea:
@@ -230,9 +252,19 @@ class Image:
 
 			if Greenarea > Redarea:
 				print "GREEN"
-				# Turn Servo Right
+				if gpioEnable == True:
+					GPIO.output(LED_GREEN, True)
+					GPIO.output(LED_RED, False)
+				if lcdEnable == True:
+					lcd.lcd_byte(0xC0, False)
+					lcd.lcd_string("GREEN   ")
+				# Turn Servo
 
-
+		if lcdEnable == True:
+			lcd.lcd_byte(0x94, False)
+			lcd.lcd_string("RED: " + str(Redarea / 1000000))
+			lcd.lcd_byte(0xD4, False)
+			lcd.lcd_string("GREEN: " + str(Greenarea / 1000000))
 		cv.imshow("Red Thresholded Image", RedimgThresholded)
 		cv.imshow("Green Thresholded Image", GreenimgThresholded)
 		cv.imshow("Original Image", filteredImage)
@@ -243,11 +275,16 @@ redhighHSV = np.array([179,255,255], dtype=np.uint8)
 greenlowHSV = np.array([50,150,60], dtype=np.uint8)
 greenhighHSV = np.array([75,255,255], dtype=np.uint8)
 
-obj = Image(1, 1, 1, redlowHSV, redhighHSV, greenlowHSV, greenhighHSV)
+obj = Image(0, 1, 1, redlowHSV, redhighHSV, greenlowHSV, greenhighHSV)
+if gpioEnable == True:
+	gpioInit()
 
 # If LCD is enabled enable lcd for display
 if lcdEnable == True:
 	lcd = LCD(LCD_RS, LCD_E, LCD_D4, LCD_D5,LCD_D6,LCD_D7)
+	lcd.lcd_init()
+	lcd.lcd_byte(0x80, False)
+	lcd.lcd_string("  Color Detection  ")
 
 while True:
 
