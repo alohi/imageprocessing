@@ -4,8 +4,8 @@ import numpy as np
 import time
 import sys
 
-lcdEnable = False
-gpioEnable = False
+lcdEnable = True
+gpioEnable = True
 
 if lcdEnable == True:
 	import RPi.GPIO as GPIO
@@ -55,8 +55,8 @@ class LCD:
 		self.LCD_LINE_1 = 0x80
 		self.LCD_LINE_2 = 0xC0
 
-		self.E_PULSE = 0.00005
-		self.E_DELAY = 0.00005
+		self.E_PULSE = 0.00007
+		self.E_DELAY = 0.00007
 
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setup(self.LCD_EN, GPIO.OUT)  # E
@@ -72,77 +72,78 @@ class LCD:
 		self.lcd_init()
 
 		# Send some test
-		self.lcd_byte(LCD_LINE_1, LCD_CMD)
+		self.lcd_byte(0x80, False)
 		self.lcd_string("Rasbperry Pi")
-		self.lcd_byte(LCD_LINE_2, LCD_CMD)
+		self.lcd_byte(0xC0, False)
 		self.lcd_string("Model B")
+		time.sleep(5)
 
 	def lcd_init(self):
 		# Initialise display
-		self.lcd_byte(0x33,LCD_CMD)
-		self.lcd_byte(0x32,LCD_CMD)
-		self.lcd_byte(0x28,LCD_CMD)
-		self.lcd_byte(0x0C,LCD_CMD)
-		self.lcd_byte(0x06,LCD_CMD)
-		self.lcd_byte(0x01,LCD_CMD)  
+		self.lcd_byte(0x33,False)
+		self.lcd_byte(0x32,False)
+		self.lcd_byte(0x28,False)
+		self.lcd_byte(0x0C,False)
+		self.lcd_byte(0x06,False)
+		self.lcd_byte(0x01,False)  
 
-	def lcd_string(message):
+	def lcd_string(self, message):
 		# Send string to display
 
-		message = message.ljust(LCD_WIDTH," ") 
+		message = message.ljust(self.LCD_WIDTH," ") 
 
-		for i in range(LCD_WIDTH):
-			self.lcd_byte(ord(message[i]),LCD_CHR)
+		for i in range(self.LCD_WIDTH):
+			self.lcd_byte(ord(message[i]),True)
 
-	def lcd_byte(bits, mode):
+	def lcd_byte(self,bits, mode):
 		# Send byte to data pins
 		# bits = data
 		# mode = True  for character
 		#        False for command
 
-		GPIO.output(LCD_RS, mode) # RS
+		GPIO.output(self.LCD_RS, mode) # RS
 
 		# High bits
-		GPIO.output(LCD_D4, False)
-		GPIO.output(LCD_D5, False)
-		GPIO.output(LCD_D6, False)
-		GPIO.output(LCD_D7, False)
+		GPIO.output(self.LCD_D4, False)
+		GPIO.output(self.LCD_D5, False)
+		GPIO.output(self.LCD_D6, False)
+		GPIO.output(self.LCD_D7, False)
 		if bits&0x10==0x10:
-			GPIO.output(LCD_D4, True)
+			GPIO.output(self.LCD_D4, True)
 		if bits&0x20==0x20:
-			GPIO.output(LCD_D5, True)
+			GPIO.output(self.LCD_D5, True)
 		if bits&0x40==0x40:
-			GPIO.output(LCD_D6, True)
+			GPIO.output(self.LCD_D6, True)
 		if bits&0x80==0x80:
-			GPIO.output(LCD_D7, True)
+			GPIO.output(self.LCD_D7, True)
 
 		# Toggle 'Enable' pin
-		time.sleep(E_DELAY)
-		GPIO.output(LCD_EN, True)
-		time.sleep(E_PULSE)
-		GPIO.output(LCD_EN, False)
-		time.sleep(E_DELAY)     
+		time.sleep(self.E_DELAY)
+		GPIO.output(self.LCD_EN, True)
+		time.sleep(self.E_PULSE)
+		GPIO.output(self.LCD_EN, False)
+		time.sleep(self.E_DELAY)     
 
 		# Low bits
-		GPIO.output(LCD_D4, False)
-		GPIO.output(LCD_D5, False)
-		GPIO.output(LCD_D6, False)
-		GPIO.output(LCD_D7, False)
+		GPIO.output(self.LCD_D4, False)
+		GPIO.output(self.LCD_D5, False)
+		GPIO.output(self.LCD_D6, False)
+		GPIO.output(self.LCD_D7, False)
 		if bits&0x01==0x01:
-			GPIO.output(LCD_D4, True)
+			GPIO.output(self.LCD_D4, True)
 		if bits&0x02==0x02:
-			GPIO.output(LCD_D5, True)
+			GPIO.output(self.LCD_D5, True)
 		if bits&0x04==0x04:
-			GPIO.output(LCD_D6, True)
+			GPIO.output(self.LCD_D6, True)
 		if bits&0x08==0x08:
-			GPIO.output(LCD_D7, True)
+			GPIO.output(self.LCD_D7, True)
 
 		# Toggle 'Enable' pin
-		time.sleep(E_DELAY)
-		GPIO.output(LCD_EN, True)
-		time.sleep(E_PULSE)
-		GPIO.output(LCD_EN, False)
-		time.sleep(E_DELAY)   
+		time.sleep(self.E_DELAY)
+		GPIO.output(self.LCD_EN, True)
+		time.sleep(self.E_PULSE)
+		GPIO.output(self.LCD_EN, False)
+		time.sleep(self.E_DELAY)   
 
 # Class for Image Processing
 class Image:
@@ -282,7 +283,7 @@ if gpioEnable == True:
 # If LCD is enabled enable lcd for display
 if lcdEnable == True:
 	lcd = LCD(LCD_RS, LCD_E, LCD_D4, LCD_D5,LCD_D6,LCD_D7)
-	lcd.lcd_init()
+	
 	lcd.lcd_byte(0x80, False)
 	lcd.lcd_string("  Color Detection  ")
 
