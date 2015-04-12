@@ -4,10 +4,10 @@ import numpy as np
 import time
 import sys
 
-lcdEnable = False
-gpioEnable = False
+lcdEnable = True
+gpioEnable = True
 
-if lcdEnable == True:
+if lcdEnable == True or gpioEnable == True:
 	import RPi.GPIO as GPIO
 
 # Define GPIO to LCD mapping
@@ -21,8 +21,8 @@ LCD_D7 = 18
 SWITCH_CAPTURE 	= 11
 SWITCH_STOP		= 9
 
-LED_GREEN		= 10
-LED_RED			= 22
+LED_GREEN = 10 
+LED_RED = 22
 
 redThresholdArea = 10000
 greenThresholdArea = 10000
@@ -72,11 +72,11 @@ class LCD:
 		self.lcd_init()
 
 		# Send some test
-		self.lcd_byte(0x80, False)
-		self.lcd_string("Rasbperry Pi")
-		self.lcd_byte(0xC0, False)
-		self.lcd_string("Model B")
-		time.sleep(5)
+		#self.lcd_byte(0x80, False)
+		#self.lcd_string("Rasbperry Pi")
+		#self.lcd_byte(0xC0, False)
+		#self.lcd_string("Model B")
+		#time.sleep(5)
 
 	def lcd_init(self):
 		# Initialise display
@@ -297,14 +297,14 @@ redhighHSV = np.array([179,255,255], dtype=np.uint8)
 greenlowHSV = np.array([50,150,60], dtype=np.uint8)
 greenhighHSV = np.array([75,255,255], dtype=np.uint8)
 
-obj = Image(-2, 1, 1, redlowHSV, redhighHSV, greenlowHSV, greenhighHSV)
+obj = Image(0, 1, 1, redlowHSV, redhighHSV, greenlowHSV, greenhighHSV)
 if gpioEnable == True:
 	gpioInit()
 
 # If LCD is enabled enable lcd for display
 if lcdEnable == True:
 	lcd = LCD(LCD_RS, LCD_E, LCD_D4, LCD_D5,LCD_D6,LCD_D7)
-	
+	time.sleep(2)
 	lcd.lcd_byte(0x80, False)
 	lcd.lcd_string("  Color Detection  ")
 
@@ -323,15 +323,18 @@ def process():
 			count = 11
 	obj.clearFlags()
 
+print "System started"
 
 while True:
 
 	#process()
 	if gpioEnable == True:
 		if GPIO.input(SWITCH_CAPTURE) == 0:
+			print "Capture"
 			time.sleep(0.3)
 			process()
 		if GPIO.input(SWITCH_STOP) == 0:
+			print "Clear"
 			time.sleep(0.3)
 			obj.clearCounts()
 
