@@ -4,8 +4,8 @@ import numpy as np
 import time
 import sys
 
-lcdEnable = True
-gpioEnable = True
+lcdEnable = False
+gpioEnable = False
 
 if lcdEnable == True:
 	import RPi.GPIO as GPIO
@@ -168,8 +168,32 @@ class Image:
 		self.redlastX 	= 0
 		self.redlastY 	= 0
 
+		self.red_count = 0
+		self.green_count = 0
+
+		self.green_flag = False
+		self.red_flag = False
+
+	def clearFlags(self):
+		self.red_flag = False
+		self.green_flag = False
+
+	def clearCounts(self):
+		self.red_count = 0
+		self.green_count = 0
+
+	def getFlags(self):
+		if self.red_flag == True and self.green_flag == True:
+			return -1 # Both found
+		elif self.red_flag == False and self.green_flag == False:
+			return -2 # Not found
+		else:
+			return 1 # Success
+
 	def doCaptureAndProcess(self):
-		_, frame = self.capture.read()
+		_, _frame = self.capture.read()
+
+		frame = cv.resize(_frame, (640, 480)) 
 
 		if self.filt == 0:
 			filteredImage = frame
@@ -211,16 +235,10 @@ class Image:
 		Greenm10  = Greenmoments['m10']
 		Greenarea = Greenmoments['m00']
 
-		# print "RED " + str(Redarea)
-		# print "GREEN " + str(Greenarea)
-
 		if Redarea > redThresholdArea:
 			#print "Red"
 			posX = Redm10 / Redarea
 			posY = Redm01 / Redarea
-
-			# print "X " + str(posX)
-			# print "Y " + str(posY)
 
 			if self.redlastX >= 0 and self.redlastY >= 0 and posX >= 0  and posY >= 0:
 				cv.line(filteredImage, (int(posX), int(posY)), (int(self.redlastX),int(self.redlastY)), (0,0,255), 5)
@@ -228,22 +246,15 @@ class Image:
 			redlastX = posX
 			redlastY = posY
 			if Redarea > Greenarea:
-				print "RED"
 				if gpioEnable == True:
 					GPIO.output(LED_GREEN, False)
 					GPIO.output(LED_RED, True)
-				if lcdEnable == True:
-					lcd.lcd_byte(0xC0, False)
-					lcd.lcd_string("GREEN   ")
-				# Turn Servo Left
+				self.red_count += 1
+				self.red_flag = True
 
 		if Greenarea > greenThresholdArea:
-			#print "Green"
 			posX = Greenm10 / Greenarea
 			posY = Greenm01 / Greenarea
-
-			# print "X " + str(posX)
-			# print "Y " + str(posY)
 
 			if self.greenlastX >= 0 and self.greenlastY >= 0 and posX >= 0  and posY >= 0:
 				cv.line(filteredImage, (int(posX), int(posY)), (int(self.greenlastX),int(self.greenlastY)), (0,0,255), 5)
@@ -252,20 +263,30 @@ class Image:
 			greenlastY = posY
 
 			if Greenarea > Redarea:
-				print "GREEN"
 				if gpioEnable == True:
 					GPIO.output(LED_GREEN, True)
 					GPIO.output(LED_RED, False)
-				if lcdEnable == True:
-					lcd.lcd_byte(0xC0, False)
-					lcd.lcd_string("GREEN   ")
-				# Turn Servo
+				self.green_count += 1
+				self.green_flag = True
+
+		# Calculate percentage area
+		red_per = (Redarea * 100) / (640 * 480)
+		green_per = (Greenarea * 100) / (640 * 480)
+
+		print "red: " + str("%.2f" % red_per) + "%"
+		print "green: " + str("%.2f" % green_per) + "%"
 
 		if lcdEnable == True:
+			lcd.lcd_byte(0xC0, False)
+			lcd.lcd_string(str(self.green_count))
+			lcd.lcd_string(", ")
+			lcd.lcd_string(str(self.red_count))
+			lcd.lcd_string("        ")
 			lcd.lcd_byte(0x94, False)
-			lcd.lcd_string("RED: " + str(Redarea / 1000000))
-			lcd.lcd_byte(0xD4, False)
-			lcd.lcd_string("GREEN: " + str(Greenarea / 1000000))
+			lcd.lcd_string("red: " + str("%.2f" % red_per) + "%")
+			lcd.lcd_byte(0xD4, False) 
+			lcd.lcd_string("green: " + str("%.2f" % green_per) + "%")
+
 		cv.imshow("Red Thresholded Image", RedimgThresholded)
 		cv.imshow("Green Thresholded Image", GreenimgThresholded)
 		cv.imshow("Original Image", filteredImage)
@@ -276,7 +297,7 @@ redhighHSV = np.array([179,255,255], dtype=np.uint8)
 greenlowHSV = np.array([50,150,60], dtype=np.uint8)
 greenhighHSV = np.array([75,255,255], dtype=np.uint8)
 
-obj = Image(0, 1, 1, redlowHSV, redhighHSV, greenlowHSV, greenhighHSV)
+obj = Image(-2, 1, 1, redlowHSV, redhighHSV, greenlowHSV, greenhighHSV)
 if gpioEnable == True:
 	gpioInit()
 
@@ -287,9 +308,32 @@ if lcdEnable == True:
 	lcd.lcd_byte(0x80, False)
 	lcd.lcd_string("  Color Detection  ")
 
+def process():
+	count = 0
+	while count < 10:
+		obj.doCaptureAndProcess()
+		count += 1
+		res = obj.getFlags()
+		if res == -1:
+			print "Both Found"
+		elif res == -2:
+			print "Not Found"
+		else:
+			print "Success"
+			count = 11
+	obj.clearFlags()
+
+
 while True:
 
-	obj.doCaptureAndProcess()
+	#process()
+	if gpioEnable == True:
+		if GPIO.input(SWITCH_CAPTURE) == 0:
+			time.sleep(0.3)
+			process()
+		if GPIO.input(SWITCH_STOP) == 0:
+			time.sleep(0.3)
+			obj.clearCounts()
 
 	# Break Operation if key interrupt
 	k = cv.waitKey(5) & 0xFF
