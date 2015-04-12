@@ -3,6 +3,7 @@ import cv2 as cv
 import numpy as np
 import time
 import sys
+import os
 
 lcdEnable = True
 gpioEnable = True
@@ -27,6 +28,9 @@ LED_RED = 22
 redThresholdArea = 10000
 greenThresholdArea = 10000
 
+#SERVO_PIN = 4
+#FREQ = 50
+
 def gpioInit():
 	GPIO.setmode(GPIO.BCM)
 	GPIO.setup(LED_GREEN, GPIO.OUT)  
@@ -35,6 +39,8 @@ def gpioInit():
 	GPIO.setup(SWITCH_STOP, GPIO.IN, pull_up_down = GPIO.PUD_UP) 
 	GPIO.output(LED_RED, True)
 	GPIO.output(LED_GREEN, True)
+	#GPIO.setup(SERVO_PIN, GPIO.OUT)
+	
 
 # Class for LCD
 class LCD:
@@ -187,11 +193,15 @@ class Image:
 			return -1 # Both found
 		elif self.red_flag == False and self.green_flag == False:
 			return -2 # Not found
-		else:
+		elif self.red_flag == True and self.green_flag == False:
 			return 1 # Success
+		elif self.red_flag == False and self.green_flag == True:
+			return 2
 
 	def doCaptureAndProcess(self):
-		_, _frame = self.capture.read()
+		#_frame = ''
+		for i in range(10):
+			_, _frame = self.capture.read()
 
 		frame = cv.resize(_frame, (640, 480)) 
 
@@ -318,13 +328,24 @@ def process():
 			print "Both Found"
 		elif res == -2:
 			print "Not Found"
-		else:
-			print "Success"
+		elif res == 1:
+			os.system("echo 0=100% > /dev/servoblaster")
+			print "Red"
 			count = 11
+			time.sleep(5)
+			os.system("echo 0=50% > /dev/servoblaster")
+		elif res == 2:
+			print "Green"
+			os.system("echo 0=0% > /dev/servoblaster")
+			count = 11
+			time.sleep(5)
+			os.system("echo 0=50% > /dev/servoblaster")
 	obj.clearFlags()
 
+#os.system("echo 0=50% > /dev/servoblaster")
 print "System started"
-
+obj.doCaptureAndProcess()
+#Servo = GPIO.PWM(SERVO_PIN, FREQ)
 while True:
 
 	#process()
