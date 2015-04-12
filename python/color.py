@@ -61,8 +61,8 @@ class LCD:
 		self.LCD_LINE_1 = 0x80
 		self.LCD_LINE_2 = 0xC0
 
-		self.E_PULSE = 0.00007
-		self.E_DELAY = 0.00007
+		self.E_PULSE = 0.0001
+		self.E_DELAY = 0.0001
 
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setup(self.LCD_EN, GPIO.OUT)  # E
@@ -301,11 +301,14 @@ class Image:
 		cv.imshow("Green Thresholded Image", GreenimgThresholded)
 		cv.imshow("Original Image", filteredImage)
 
-redlowHSV = np.array([170,150,60], dtype=np.uint8)
-redhighHSV = np.array([179,255,255], dtype=np.uint8)
+redlowHSV = np.array([160,150,60], dtype=np.uint8)
+redhighHSV = np.array([170,255,255], dtype=np.uint8)
 
 greenlowHSV = np.array([50,150,60], dtype=np.uint8)
 greenhighHSV = np.array([75,255,255], dtype=np.uint8)
+
+#os.system("servod")
+time.sleep(1)
 
 obj = Image(0, 1, 1, redlowHSV, redhighHSV, greenlowHSV, greenhighHSV)
 if gpioEnable == True:
@@ -342,7 +345,9 @@ def process():
 			os.system("echo 0=50% > /dev/servoblaster")
 	obj.clearFlags()
 
-#os.system("echo 0=50% > /dev/servoblaster")
+os.system("servod --p1pins=7,0,0,0,0,0,0,0")
+#time.sleep(1)
+os.system("echo 0=50% > /dev/servoblaster")
 print "System started"
 obj.doCaptureAndProcess()
 #Servo = GPIO.PWM(SERVO_PIN, FREQ)
