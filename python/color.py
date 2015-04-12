@@ -301,11 +301,11 @@ class Image:
 		cv.imshow("Green Thresholded Image", GreenimgThresholded)
 		cv.imshow("Original Image", filteredImage)
 
-redlowHSV = np.array([160,150,60], dtype=np.uint8)
-redhighHSV = np.array([170,255,255], dtype=np.uint8)
+redlowHSV = np.array([170,150,60], dtype=np.uint8)
+redhighHSV = np.array([179,255,255], dtype=np.uint8)
 
-greenlowHSV = np.array([50,150,60], dtype=np.uint8)
-greenhighHSV = np.array([75,255,255], dtype=np.uint8)
+greenlowHSV = np.array([60,150,60], dtype=np.uint8)
+greenhighHSV = np.array([70,255,255], dtype=np.uint8)
 
 #os.system("servod")
 time.sleep(1)
