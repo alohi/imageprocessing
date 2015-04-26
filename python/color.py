@@ -25,8 +25,9 @@ SWITCH_STOP		= 9
 LED_GREEN = 10 
 LED_RED = 22
 
-redThresholdArea = 10000
-greenThresholdArea = 10000
+# Green has to remove and unit is required to calc %
+redThresholdArea 	= 10000
+greenThresholdArea 	= 10000
 
 #SERVO_PIN = 4
 #FREQ = 50
