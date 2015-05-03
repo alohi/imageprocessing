@@ -1,5 +1,6 @@
 
 import RPi.GPIO as GPIO
+import time
 
 class LCD:
 
@@ -19,8 +20,8 @@ class LCD:
 		self.LCD_LINE_1 = 0x80
 		self.LCD_LINE_2 = 0xC0
 
-		self.E_PULSE = 0.0001
-		self.E_DELAY = 0.0001
+		self.E_PULSE = 0.001
+		self.E_DELAY = 0.001
 
 		GPIO.setmode(GPIO.BCM)
 		GPIO.setup(self.LCD_EN, GPIO.OUT)  # E
@@ -47,9 +48,9 @@ class LCD:
 	def lcd_string(self, message):
 		# Send string to display
 
-		message = message.ljust(self.LCD_WIDTH," ") 
+		#message = message.ljust(self.LCD_WIDTH," ") 
 
-		for i in range(self.LCD_WIDTH):
+		for i in range(len(message)):
 			self.lcd_byte(ord(message[i]),True)
 
 	def lcd_byte(self,bits, mode):
