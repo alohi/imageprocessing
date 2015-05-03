@@ -12,7 +12,7 @@ import math
 _threshold = 27000000
 _div = 100000
 
-ui_enable = True
+ui_enable = False
 
 # LCD Pins
 LCD_RS 			= 7
@@ -38,6 +38,8 @@ if ui_enable == True:
 _redL = np.array([1,150,60])
 _redH = np.array([33,255,255])
 
+def l_map(x, in_min, in_max, out_min, out_max): 
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 def gpioInit():
 	GPIO.setmode(GPIO.BCM)
@@ -53,7 +55,7 @@ def run():
         os.system('fswebcam -r 1284x720 -d /dev/video0 --no-banner /tmp/test.jpg -S 30')
         time.sleep(2)
         print 'processing'
-        lcd.lcd_byte(0xC0, False)
+        lcd.lcd_byte(0x80, False)
 	lcd.lcd_string("Processing       ")
         frame = cv2.imread('/tmp/test.jpg')
         frame 	= cv2.GaussianBlur(frame, (5,5),0)
@@ -73,10 +75,12 @@ def run():
         area	= moments['m00']
 
         print 'area: ' + str(area)
-        cal = math.sqrt(area/3.142)
-        print 'calc: ' + str(cal)
+        rad = math.sqrt(area/3.142)
+        print 'radius: ' + str(rad)
 
         if area > _threshold:
+                lcd.lcd_byte(0xC0, False)
+                lcd.lcd_string("Good One          ")
                 __x	= moments['m10']
                 __y	= moments['m01']
 
@@ -89,28 +93,39 @@ def run():
                 if ui_enable:
                         cv2.circle(frame,(int(X),int(Y)), int((area / _div)), (22,68,196), 2)
                         cv2.imshow('result', frame)
-                lcd.lcd_byte(0x94, False)
+		per = int(l_map(area, 20000000, 50000000, 70,95))
+                lcd.lcd_byte(0xD4, False)
                 lcd.lcd_string("Loc(x,y): ")
                 str1 = str(int(X)) + ", " + str(int(Y))
                 lcd.lcd_string(str1)
                 lcd.lcd_string("    ")
-                lcd.lcd_byte(0xD4, False)
-                lcd.lcd_string("radius: ")
-                lcd.lcd_string(str(int((area / _div))))
+                lcd.lcd_byte(0x94, False)
+                lcd.lcd_string("per: ")
+		#lcd.lcd_string(str(int(per))))
+                lcd.lcd_string(str(per))
                 lcd.lcd_string("    ")
                 GPIO.output(LED_RED, False)
                 GPIO.output(LED_GREEN, True)
+		#per = l_map(area, 20000000, 50000000, 0, 100)
+		#print str(per)
                 os.system("echo 0=100% > /dev/servoblaster")
-                time.sleep(5)
+                time.sleep(2)
                 os.system("echo 0=50% > /dev/servoblaster")
                 return True
         else:
+		per = int(l_map(area, 0, 20000000, 0,30))
+                lcd.lcd_byte(0x80, False)
+                lcd.lcd_string("Bad One          ")
                 if ui_enable == True:
                         cv2.imshow('result', frame)
                 GPIO.output(LED_RED, True)
                 GPIO.output(LED_GREEN, False)
+		lcd.lcd_byte(0x94, False)
+		lcd.lcd_string("per:")
+		lcd.lcd_string(str(per))
+		lcd.lcd_string("    ")
                 os.system("echo 0=0% > /dev/servoblaster")
-                time.sleep(5)
+                time.sleep(2)
                 os.system("echo 0=50% > /dev/servoblaster")
                 return False
            
@@ -126,8 +141,8 @@ os.system("echo 0=50% > /dev/servoblaster")
 
 # Init lcd
 lcd = LCD(LCD_RS, LCD_E, LCD_D4, LCD_D5,LCD_D6,LCD_D7)
-lcd.lcd_byte(0x80, False)
-lcd.lcd_string("  Color Detection  ")
+#lcd.lcd_byte(0x80, False)
+#lcd.lcd_string("  Color Detection  ")
 
 #run()
 
@@ -136,33 +151,41 @@ lcd.lcd_string("Ready......     ")
 
 while True:
 	if GPIO.input(SWITCH_CAPTURE) 	== 0:
-		lcd.lcd_byte(0xC0, False)
+		lcd.lcd_byte(0x80, False)
 		lcd.lcd_string("Capturing       ")
 		res = run()
-		lcd.lcd_byte(0xC0, False)
+		lcd.lcd_byte(0x80, False)
 		lcd.lcd_string("Completed       ")
 		if res == True:
                     gud += 1
                 tot += 1
 		lcd.lcd_byte(0xC0, False)
-		lcd.lcd_string('tot: ')
-		lcd.lcd_string(str(tot))
-		lcd.lcd_string('    ')
-		lcd.lcd_string('gud: ')
+		lcd.lcd_string('red:')
 		lcd.lcd_string(str(gud))
 		lcd.lcd_string('    ')
+		lcd.lcd_string('n-red: ')
+		lcd.lcd_string(str(tot - gud))
+		lcd.lcd_string('    ')
+		lcd.lcd_byte(0x80, False)
+		lcd.lcd_string('total:')
+		lcd.lcd_string(str(tot))
+		lcd.lcd_string('      ')
 		print "Capture"
 	if GPIO.input(SWITCH_STOP) 		== 0:
                 tot = 0
                 gud = 0
-                lcd.lcd_byte(0xC0, False)
+                lcd.lcd_byte(0x80, False)
 		lcd.lcd_string("Clearing        ")
 		lcd.lcd_byte(0xC0, False)
-		lcd.lcd_string('tot: ')
-		lcd.lcd_string(str(tot))
-		lcd.lcd_string('    ')
-		lcd.lcd_string('gud: ')
+		lcd.lcd_string('red:')
 		lcd.lcd_string(str(gud))
+		lcd.lcd_string('    ')
+		lcd.lcd_string('n-red:')
+		lcd.lcd_string(str(tot - gud))
+		lcd.lcd_string('    ')
+		lcd.lcd_byte(0x80, False)
+		lcd.lcd_string('total:')
+		lcd.lcd_string(str(tot))
 		lcd.lcd_string('    ')
 		print "Clear"
 
